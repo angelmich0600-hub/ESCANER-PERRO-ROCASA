@@ -1,273 +1,482 @@
-<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📱 Generador de Credencial (Móvil)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📷 Generador PDF de Identificación (Doble Cara) - Final</title>
 
-    <!-- jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    
+    <style>
+        /* (Mismos estilos CSS de la versión anterior) */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-    <!-- CropperJS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+        }
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 15px;
-            background: #f2f3f4;
-        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 5px;
+        }
 
-        .container {
-            background: white;
-            padding: 20px;
-            border-radius: 14px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
+        p.subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 15px;
+        }
 
-        h1 {
-            font-size: 1.4rem;
-            margin-bottom: 15px;
-            text-align: center;
-        }
+        .input-group {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
 
-        .upload-btn {
-            display: block;
-            width: 100%;
-            background: #3498db;
-            color: white;
-            padding: 17px;
-            margin-top: 18px;
-            border-radius: 12px;
-            text-align: center;
-            font-size: 1.15rem;
-            cursor: pointer;
-            letter-spacing: 0.5px;
-        }
+        .input-box {
+            flex: 1;
+            padding: 15px;
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            text-align: center;
+            background-color: #ecf0f1;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
 
-        input[type="file"] {
-            display: none;
-        }
+        .input-box:hover {
+            background-color: #e0e6e9;
+            border-color: #2980b9;
+        }
 
-        .preview-area {
-            margin-top: 25px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+        input[type="file"] {
+            display: none;
+        }
 
-        .preview-area img {
-            width: 100%;
-            border-radius: 12px;
-            border: 1px solid #ccc;
-            padding: 5px;
-            background: #fafafa;
-        }
+        .preview-area {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            min-height: 200px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
 
-        #generate-pdf-btn {
-            width: 100%;
-            padding: 18px;
-            margin-top: 30px;
-            background: #27ae60;
-            color: white;
-            font-size: 1.2rem;
-            border: none;
-            border-radius: 12px;
-        }
+        .preview-area img {
+            max-width: 45%;
+            height: auto;
+            border: 1px solid #ddd;
+            object-fit: contain;
+        }
+        
+        .placeholder {
+            color: #95a5a6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-style: italic;
+        }
 
-        #generate-pdf-btn:disabled {
-            background: #95a5a6;
-        }
+        #generate-pdf-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
 
-        /* ===========================
-           MODAL DE RECORTE
-        ============================*/
+        #generate-pdf-btn:hover {
+            background-color: #2ecc71;
+        }
+        
+        #generate-pdf-btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
 
-        #crop-modal {
-            display: none;
-            position: fixed;
-            top: 0; 
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.85);
-            z-index: 9999;
-            padding: 0;
-            overflow: hidden;
-            justify-content: center;
-            align-items: center;
-        }
+        /* --- Estilos del Modal de Recorte --- */
+        #crop-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 20px;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
 
-        #crop-box {
-            background: white;
-            width: 100%;
-            height: 100%;
-            max-width: 450px;
-            margin: auto;
-            display: flex;
-            flex-direction: column;
-            border-radius: 0;
-            padding: 12px;
-        }
+        #image-to-crop {
+            display: block;
+            max-width: 100%;
+        }
+        
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 15px;
+        }
 
-        .crop-container {
-            flex: 1;
-            overflow: auto;
-            margin-bottom: 15px;
-        }
+        #crop-confirm-btn {
+            background: #2ecc71;
+            color: white;
+        }
 
-        #image-to-crop {
-            width: 100%;
-        }
+        #crop-cancel-btn {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        /* Estilos para los nuevos botones de control */
+        .crop-controls button {
+            padding: 8px 15px;
+            border-radius: 5px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: normal;
+            transition: background-color 0.2s;
+        }
+        .crop-controls button:hover {
+            opacity: 0.9;
+        }
 
-        .crop-buttons {
-            position: sticky;
-            bottom: 0;
-            background: white;
-            padding-bottom: 10px;
-            padding-top: 10px;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 10px;
-            font-size: 1.1rem;
-            border: none;
-            color: white;
-        }
-
-        .btn-success { background: #2ecc71; }
-        .btn-danger { background: #e74c3c; }
-    </style>
+    </style>
 </head>
-
 <body>
 
-<div class="container">
+    <div class="container">
+        <h1>Generador de PDF para Identificación (Doble Cara)</h1>
+        <p class="subtitle">Sube, recorta al tamaño de la INE y unifica ambas caras en una sola hoja PDF tamaño A4.</p>
 
-    <h1>📱 Generar PDF de Credencial</h1>
+        <div class="input-group">
+            <label for="file-frente" class="input-box">
+                📸 **Frente** (Toca para tomar foto)
+                <input type="file" id="file-frente" accept="image/*" capture="environment" onchange="handleFileInput(event, 'frente')">
+            </label>
+            
+            <label for="file-reverso" class="input-box">
+                📸 **Reverso** (Toca para tomar foto)
+                <input type="file" id="file-reverso" accept="image/*" capture="environment" onchange="handleFileInput(event, 'reverso')">
+            </label>
+        </div>
 
-    <!-- Botón foto frente -->
-    <label class="upload-btn">
-        📸 Tomar / Subir Frente
-        <input type="file" id="file-frente" accept="image/*" capture="environment">
-    </label>
+        <h2>Vista Previa (PDF Final)</h2>
+        <div class="preview-area">
+            <img id="preview-frente" src="" alt="Frente - Recortado" style="display:none;">
+            <img id="preview-reverso" src="" alt="Reverso - Recortado" style="display:none;">
+            <div id="placeholder" class="placeholder" style="display:flex;">Sube y recorta ambas imágenes.</div>
+        </div>
 
-    <!-- Botón foto reverso -->
-    <label class="upload-btn">
-        📸 Tomar / Subir Reverso
-        <input type="file" id="file-reverso" accept="image/*" capture="environment">
-    </label>
+        <button id="generate-pdf-btn" disabled>
+            ⬇️ Generar y Compartir / Descargar PDF
+        </button>
+    </div>
 
-    <!-- Vista previa -->
-    <div class="preview-area">
-        <img id="preview-frente" style="display:none;">
-        <img id="preview-reverso" style="display:none;">
-    </div>
+    <div id="crop-modal">
+        <div class="modal-content">
+            <h2>✂️ Recortar Imagen</h2>
+            <p>Ajusta el área para que coincida con tu credencial. El ratio es fijo (tarjeta estándar).</p>
+            <div style="max-height: 400px; overflow: hidden; margin-bottom: 15px;">
+                <img id="image-to-crop">
+            </div>
+            
+                        <div class="crop-controls" style="margin-bottom: 15px; text-align: center;">
+                <button id="rotate-btn" style="background: #3498db;">🔄 Rotar 90°</button>
+                <button id="flip-horizontal-btn" style="background: #e67e22;">↔️ Espejo Horizontal</button>
+                <button id="flip-vertical-btn" style="background: #e67e22;">↕️ Espejo Vertical</button>
+            </div>
+                        <div class="modal-buttons">
+                <button id="crop-confirm-btn">Confirmar Recorte</button>
+                <button id="crop-cancel-btn">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
-    <button id="generate-pdf-btn" disabled>📥 Descargar PDF</button>
-</div>
 
-<!-- Modal para recortar -->
-<div id="crop-modal">
-    <div id="crop-box">
-        <h3 style="text-align:center; margin-bottom:10px;">✂️ Ajustar Imagen</h3>
+    <script>
+        // Variables globales
+        let imgDataFrente = null;
+        let imgDataReverso = null;
+        let currentCropper = null;
+        let currentSide = null; 
+        
+        // >>> Variables AGREGADAS para el estado de volteo/rotación
+        let flippedX = 1; // 1 (normal) o -1 (volteado horizontalmente)
+        let flippedY = 1; // 1 (normal) o -1 (volteado verticalmente)
+        let rotated = 0; // Ángulo de rotación
+        // <<<
+        
+        const { jsPDF } = window.jspdf;
 
-        <div class="crop-container">
-            <img id="image-to-crop">
-        </div>
+        // Referencias del DOM
+        const D = {
+            cropModal: document.getElementById('crop-modal'),
+            imageToCrop: document.getElementById('image-to-crop'),
+            cropConfirmBtn: document.getElementById('crop-confirm-btn'),
+            cropCancelBtn: document.getElementById('crop-cancel-btn'),
+            generatePdfBtn: document.getElementById('generate-pdf-btn'),
+            placeholder: document.getElementById('placeholder'),
+            previewFrente: document.getElementById('preview-frente'),
+            previewReverso: document.getElementById('preview-reverso'),
+            // >>> Referencias AGREGADAS
+            rotateBtn: document.getElementById('rotate-btn'),
+            flipHorizontalBtn: document.getElementById('flip-horizontal-btn'),
+            flipVerticalBtn: document.getElementById('flip-vertical-btn')
+            // <<<
+        };
 
-        <div class="crop-buttons">
-            <button id="crop-confirm-btn" class="btn btn-success">Confirmar</button>
-            <button id="crop-cancel-btn" class="btn btn-danger">Cancelar</button>
-        </div>
-    </div>
-</div>
+        // --- MANEJADORES DE EVENTOS ---
+        D.cropConfirmBtn.onclick = confirmCrop;
+        D.cropCancelBtn.onclick = cancelCrop;
+        D.generatePdfBtn.onclick = generatePDF;
+        // >>> MANEJADORES DE EVENTOS AGREGADOS
+        D.rotateBtn.onclick = () => { rotateImage(90) };
+        D.flipHorizontalBtn.onclick = () => { flipImage('horizontal') };
+        D.flipVerticalBtn.onclick = () => { flipImage('vertical') };
+        // <<<
 
-<script>
-let imgDataFrente = null;
-let imgDataReverso = null;
-let currentSide = null;
-let cropper = null;
 
-const { jsPDF } = window.jspdf;
+        /**
+         * Maneja la subida del archivo y comienza el proceso de recorte.
+         */
+        function handleFileInput(event, side) {
+            const file = event.target.files[0];
 
-document.getElementById("file-frente").onchange = () => loadAndCrop("frente");
-document.getElementById("file-reverso").onchange = () => loadAndCrop("reverso");
+            if (file) {
+                if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                    alert('Formato de archivo no soportado. Por favor, sube una imagen JPEG o PNG.');
+                    event.target.value = '';
+                    return;
+                }
 
-const modal = document.getElementById("crop-modal");
-const imgToCrop = document.getElementById("image-to-crop");
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentSide = side;
+                    
+                    // >>> Reiniciar estado de transformación para la nueva imagen
+                    flippedX = 1;
+                    flippedY = 1;
+                    rotated = 0;
+                    // <<<
+                    
+                    if (currentCropper) currentCropper.destroy();
+                    D.imageToCrop.src = e.target.result;
+                    
+                    D.cropModal.style.display = 'flex';
+                    
+                    // Inicializa Cropper.js
+                    setTimeout(() => {
+                         currentCropper = new Cropper(D.imageToCrop, {
+                            aspectRatio: 1.586, // Ratio estándar de tarjeta de crédito/INE
+                            viewMode: 1, 
+                            dragMode: 'move',
+                            autoCropArea: 0.9,
+                        });
+                    }, 50);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
 
-function loadAndCrop(side) {
-    const fileInput = document.getElementById("file-" + side);
-    const file = fileInput.files[0];
-    if (!file) return;
+        /**
+         * Rota la imagen en incrementos de 90 grados.
+         */
+        function rotateImage(degree) {
+            if (currentCropper) {
+                rotated += degree;
+                currentCropper.rotateTo(rotated);
+            }
+        }
 
-    currentSide = side;
+        /**
+         * Voltea la imagen horizontal o verticalmente (efecto espejo).
+         */
+        function flipImage(direction) {
+            if (currentCropper) {
+                if (direction === 'horizontal') {
+                    flippedX = -1 * flippedX;
+                    currentCropper.scaleX(flippedX);
+                } else if (direction === 'vertical') {
+                    flippedY = -1 * flippedY;
+                    currentCropper.scaleY(flippedY);
+                }
+            }
+        }
 
-    const reader = new FileReader();
-    reader.onload = e => {
-        imgToCrop.src = e.target.result;
-        modal.style.display = "flex";
 
-        if (cropper) cropper.destroy();
+        /**
+         * Confirma el recorte y actualiza las variables de datos y la vista previa.
+         */
+        function confirmCrop() {
+            if (!currentCropper) return;
 
-        setTimeout(() => {
-            cropper = new Cropper(imgToCrop, {
-                aspectRatio: 1.586,
-                viewMode: 1,
-                autoCropArea: 1
-            });
-        }, 150);
-    };
+            // Obtiene la imagen recortada en formato base64 con un ancho de 500px para buena calidad
+            const base64Data = currentCropper.getCroppedCanvas({
+                imageSmoothingQuality: 'high',
+                width: 500, 
+            }).toDataURL('image/jpeg', 0.9);
 
-    reader.readAsDataURL(file);
-}
+            // Actualiza la variable de datos y la vista previa
+            const previewElement = (currentSide === 'frente') ? D.previewFrente : D.previewReverso;
+            previewElement.src = base64Data;
+            previewElement.style.display = 'block';
 
-document.getElementById("crop-confirm-btn").onclick = () => {
-    cropper.getCroppedCanvas().toBlob(blob => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64 = reader.result;
+            if (currentSide === 'frente') {
+                imgDataFrente = base64Data;
+            } else {
+                imgDataReverso = base64Data;
+            }
 
-            const preview = document.getElementById("preview-" + currentSide);
-            preview.src = base64;
-            preview.style.display = "block";
+            // Cierra el modal y limpia el cropper
+            closeCropModal();
+            checkAndEnableButton();
+        }
 
-            if (currentSide === "frente") imgDataFrente = base64;
-            else imgDataReverso = base64;
+        /**
+         * Cancela la operación de recorte y cierra el modal.
+         */
+        function cancelCrop() {
+            closeCropModal();
+        }
 
-            checkReady();
-        };
-        reader.readAsDataURL(blob);
-    });
+        function closeCropModal() {
+            if (currentCropper) {
+                currentCropper.destroy();
+                currentCropper = null;
+            }
+            D.cropModal.style.display = 'none';
+        }
 
-    modal.style.display = "none";
-    cropper.destroy();
-};
+        /**
+         * Verifica el estado de las imágenes y habilita/deshabilita el botón.
+         */
+        function checkAndEnableButton() {
+            if (imgDataFrente && imgDataReverso) {
+                D.generatePdfBtn.disabled = false;
+                D.placeholder.style.display = 'none';
+            } else {
+                D.generatePdfBtn.disabled = true;
+                D.placeholder.style.display = 'flex';
+            }
+        }
+        
+        // --- FUNCIÓN PRINCIPAL DE GENERACIÓN Y COMPARTICIÓN ---
 
-document.getElementById("crop-cancel-btn").onclick = () => {
-    modal.style.display = "none";
-    if (cropper) cropper.destroy();
-};
+        /**
+         * Genera el PDF, luego intenta compartirlo o lo descarga.
+         */
+        function generatePDF() {
+            if (D.generatePdfBtn.disabled) return;
+            
+            const doc = new jsPDF('portrait', 'mm', 'a4');
+            const margin = 15; 
+            const spacing = 5; 
+            const cardWidth = 85.6; // Ancho estándar INE en mm
+            const cardHeight = 54; // Alto estándar INE en mm
+            const fileName = 'Identificacion_Doble_Cara.pdf';
 
-function checkReady() {
-    document.getElementById("generate-pdf-btn").disabled = !(imgDataFrente && imgDataReverso);
-}
+            try {
+                // Colocar el FRENTE
+                doc.addImage(imgDataFrente, 'JPEG', margin, margin, cardWidth, cardHeight);
 
-document.getElementById("generate-pdf-btn").onclick = () => {
-    const pdf = new jsPDF("portrait", "mm", "a4");
+                // Colocar el REVERSO
+                const xReverso = margin + cardWidth + spacing; 
+                const yReverso = margin; 
+                doc.addImage(imgDataReverso, 'JPEG', xReverso, yReverso, cardWidth, cardHeight);
+                
+                // 1. Convertir el PDF generado a un Blob (necesario para compartir)
+                const pdfBlob = doc.output('blob');
 
-    pdf.addImage(imgDataFrente, "JPEG", 10, 10, 90, 60);
-    pdf.addImage(imgDataReverso, "JPEG", 110, 10, 90, 60);
+                // 2. Intentar compartir si el navegador lo soporta
+                const fileToShare = new File([pdfBlob], fileName, { type: 'application/pdf' });
+                
+                if (navigator.canShare && navigator.canShare({ files: [fileToShare] })) {
+                    
+                    sharePDF(fileToShare);
+                    
+                } else {
+                    // 3. Si no se puede compartir, forzar la descarga
+                    doc.save(fileName);
+                    alert("Tu dispositivo/navegador no soporta la opción de compartir archivos. El PDF ha sido descargado automáticamente.");
+                }
+                
+            } catch (error) {
+                alert("Ocurrió un error al generar el PDF. Revisa las imágenes.");
+                console.error("Error al generar PDF:", error);
+            }
+        }
+        
+        /**
+         * Llama a la Web Share API para abrir el menú nativo del móvil.
+         */
+        async function sharePDF(pdfFile) {
+            try {
+                await navigator.share({
+                    files: [pdfFile],
+                    title: 'Credencial Doble Cara PDF',
+                    text: 'Te envío la credencial unificada en un solo archivo PDF.',
+                });
+                
+                console.log('PDF compartido con éxito.');
 
-    pdf.save("credencial.pdf");
-};
-</script>
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                     console.log('Compartir cancelado por el usuario.');
+                } else {
+                     console.error('Error al intentar compartir:', error);
+                     alert('No se pudo compartir. El PDF será descargado.');
+                     // Fallback: si falla el compartir (pero no por cancelación), se descarga
+                     const doc = new jsPDF('portrait', 'mm', 'a4');
+                     doc.addImage(imgDataFrente, 'JPEG', 15, 15, 85.6, 54);
+                     doc.addImage(imgDataReverso, 'JPEG', 15 + 85.6 + 5, 15, 85.6, 54);
+                     doc.save('Identificacion_Doble_Cara.pdf');
+                }
+            }
+        }
+        
+        // Inicializa el estado del botón
+        checkAndEnableButton();
+    </script>
 
 </body>
 </html>
