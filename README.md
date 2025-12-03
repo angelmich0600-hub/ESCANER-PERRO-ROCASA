@@ -417,8 +417,8 @@
             try {
                 await navigator.share({
                     files: [pdfFile],
-                    title: 'Credencial Doble Cara PDF',
-                    text: 'Te envío la credencial unificada en un solo archivo PDF.',
+                    title: 'INE CLIENTE',
+                    text: 'Suerte en la venta 🌟.',
                 });
                 
                 console.log('PDF compartido con éxito.');
