@@ -9,7 +9,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     
     <style>
-        /* (Mismos estilos CSS de la versión anterior) */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f7f6;
@@ -50,6 +49,7 @@
             margin-bottom: 30px;
         }
 
+        /* Ahora es un div con onclick */
         .input-box {
             flex: 1;
             padding: 15px;
@@ -165,7 +165,7 @@
             color: white;
         }
         
-        /* ESTILO NUEVO PARA EL BOTÓN DE ROTACIÓN */
+        /* ESTILO BOTÓN DE ROTACIÓN */
         #rotate-btn {
             padding: 10px 20px;
             border: none;
@@ -175,10 +175,65 @@
             background: #3498db;
             color: white;
             margin-top: 15px;
-            display: block; /* Para que ocupe todo el ancho o centrarlo */
+            display: block;
             width: 100%;
         }
 
+        /* --- Estilos del NUEVO Modal de Selección --- */
+        #selection-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9998; /* Un poco menos que el modal de recorte */
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content-small {
+            background: white;
+            padding: 20px;
+            width: 90%;
+            max-width: 350px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .selection-options button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        #select-camera-btn {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        #select-gallery-btn {
+            background-color: #3498db;
+            color: white;
+        }
+
+        #selection-cancel-btn {
+            background: #bdc3c7;
+            color: #2c3e50;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            width: 100%;
+            border: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -188,17 +243,19 @@
         <p class="subtitle">Sube, recorta al tamaño de la INE y unifica ambas caras en una sola hoja PDF tamaño A4.</p>
 
         <div class="input-group">
-            <label for="file-frente" class="input-box">
-                📸 **Frente** (Toca para tomar foto)
-                <input type="file" id="file-frente" accept="image/*" capture="environment" onchange="handleFileInput(event, 'frente')">
-            </label>
             
-            <label for="file-reverso" class="input-box">
-                📸 **Reverso** (Toca para tomar foto)
-                <input type="file" id="file-reverso" accept="image/*" capture="environment" onchange="handleFileInput(event, 'reverso')">
-            </label>
+            <div class="input-box" onclick="openSelectionMenu('frente')">
+                📸 **Frente** (Toca para seleccionar origen)
+                <input type="file" id="file-frente-camara" accept="image/*" capture="environment" onchange="handleFileInput(event, 'frente')" style="display:none;">
+                <input type="file" id="file-frente-galeria" accept="image/*" onchange="handleFileInput(event, 'frente')" style="display:none;">
+            </div>
+            
+            <div class="input-box" onclick="openSelectionMenu('reverso')">
+                📸 **Reverso** (Toca para seleccionar origen)
+                <input type="file" id="file-reverso-camara" accept="image/*" capture="environment" onchange="handleFileInput(event, 'reverso')" style="display:none;">
+                <input type="file" id="file-reverso-galeria" accept="image/*" onchange="handleFileInput(event, 'reverso')" style="display:none;">
+            </div>
         </div>
-
         <h2>Vista Previa (PDF Final)</h2>
         <div class="preview-area">
             <img id="preview-frente" src="" alt="Frente - Recortado" style="display:none;">
@@ -226,8 +283,17 @@
             </div>
         </div>
     </div>
-
-
+    
+    <div id="selection-modal">
+        <div class="modal-content-small">
+            <h2>Elige una Opción</h2>
+            <div class="selection-options">
+                <button id="select-camera-btn">📷 Tomar Foto (Cámara)</button>
+                <button id="select-gallery-btn">🖼️ Subir de Galería</button>
+            </div>
+            <button id="selection-cancel-btn">Cancelar</button>
+        </div>
+    </div>
     <script>
         // Variables globales
         let imgDataFrente = null;
@@ -235,10 +301,11 @@
         let currentCropper = null;
         let currentSide = null;
         let rotated = 0; // Variable para rastrear la rotación acumulada
+        let sideToSelect = null; // NUEVA variable para rastrear el lado en el menú de selección
         
         const { jsPDF } = window.jspdf;
 
-        // Referencias del DOM
+        // Referencias del DOM (Actualizadas)
         const D = {
             cropModal: document.getElementById('crop-modal'),
             imageToCrop: document.getElementById('image-to-crop'),
@@ -248,28 +315,74 @@
             placeholder: document.getElementById('placeholder'),
             previewFrente: document.getElementById('preview-frente'),
             previewReverso: document.getElementById('preview-reverso'),
-            // NUEVA REFERENCIA
-            rotateBtn: document.getElementById('rotate-btn') 
+            rotateBtn: document.getElementById('rotate-btn'),
+            
+            // NUEVAS REFERENCIAS PARA EL MENÚ DE SELECCIÓN
+            selectionModal: document.getElementById('selection-modal'),
+            selectCameraBtn: document.getElementById('select-camera-btn'),
+            selectGalleryBtn: document.getElementById('select-gallery-btn'),
+            selectionCancelBtn: document.getElementById('selection-cancel-btn')
         };
 
         // --- MANEJADORES DE EVENTOS ---
         D.cropConfirmBtn.onclick = confirmCrop;
         D.cropCancelBtn.onclick = cancelCrop;
         D.generatePdfBtn.onclick = generatePDF;
-        // MANEJADOR DE EVENTO PARA EL NUEVO BOTÓN
-        D.rotateBtn.onclick = () => { rotateImage(90) }; 
+        D.rotateBtn.onclick = () => { rotateImage(90) };
+        
+        // MANEJADORES DE EVENTOS PARA EL NUEVO MENÚ
+        D.selectCameraBtn.onclick = () => triggerFileInput('camera');
+        D.selectGalleryBtn.onclick = () => triggerFileInput('gallery');
+        D.selectionCancelBtn.onclick = closeSelectionMenu;
+        
+        
+        /**
+         * Muestra el modal de selección y establece el lado actual.
+         */
+        function openSelectionMenu(side) {
+            sideToSelect = side;
+            D.selectionModal.style.display = 'flex';
+        }
 
+        /**
+         * Oculta el modal de selección.
+         */
+        function closeSelectionMenu() {
+            D.selectionModal.style.display = 'none';
+            sideToSelect = null;
+        }
+
+        /**
+         * Oculta el modal de selección y simula el click en el input de archivo apropiado.
+         */
+        function triggerFileInput(type) {
+            if (!sideToSelect) return;
+
+            closeSelectionMenu();
+
+            let inputFileId;
+            if (sideToSelect === 'frente') {
+                inputFileId = (type === 'camera') ? 'file-frente-camara' : 'file-frente-galeria';
+            } else {
+                inputFileId = (type === 'camera') ? 'file-reverso-camara' : 'file-reverso-galeria';
+            }
+            
+            // Simular el click en el input de archivo oculto
+            document.getElementById(inputFileId).click();
+        }
 
         /**
          * Maneja la subida del archivo y comienza el proceso de recorte.
+         * Esta función ahora se llama desde el onchange de los inputs ocultos.
          */
         function handleFileInput(event, side) {
             const file = event.target.files[0];
+            // IMPORTANTE: Limpiar el valor del input después de tomar el archivo
+            event.target.value = ''; 
 
             if (file) {
                 if (!['image/jpeg', 'image/png'].includes(file.type)) {
                     alert('Formato de archivo no soportado. Por favor, sube una imagen JPEG o PNG.');
-                    event.target.value = '';
                     return;
                 }
 
@@ -425,15 +538,15 @@
 
             } catch (error) {
                 if (error.name === 'AbortError') {
-                     console.log('Compartir cancelado por el usuario.');
+                    console.log('Compartir cancelado por el usuario.');
                 } else {
-                     console.error('Error al intentar compartir:', error);
-                     alert('No se pudo compartir. El PDF será descargado.');
-                     // Fallback: si falla el compartir (pero no por cancelación), se descarga
-                     const doc = new jsPDF('portrait', 'mm', 'a4');
-                     doc.addImage(imgDataFrente, 'JPEG', 15, 15, 85.6, 54);
-                     doc.addImage(imgDataReverso, 'JPEG', 15 + 85.6 + 5, 15, 85.6, 54);
-                     doc.save('Identificacion_Doble_Cara.pdf');
+                    console.error('Error al intentar compartir:', error);
+                    alert('No se pudo compartir. El PDF será descargado.');
+                    // Fallback: si falla el compartir (pero no por cancelación), se descarga
+                    const doc = new jsPDF('portrait', 'mm', 'a4');
+                    doc.addImage(imgDataFrente, 'JPEG', 15, 15, 85.6, 54);
+                    doc.addImage(imgDataReverso, 'JPEG', 15 + 85.6 + 5, 15, 85.6, 54);
+                    doc.save('Identificacion_Doble_Cara.pdf');
                 }
             }
         }
