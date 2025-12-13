@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📷 Generador PDF de Identificación (Doble Cara) - Final</title>
+    <title>📷 Generador PDF de Identificación (Doble Cara) - Final Arreglado</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
@@ -188,7 +188,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.6);
-            z-index: 9998; /* Un poco menos que el modal de recorte */
+            z-index: 9998; 
             justify-content: center;
             align-items: center;
         }
@@ -301,7 +301,7 @@
         let currentCropper = null;
         let currentSide = null;
         let rotated = 0; // Variable para rastrear la rotación acumulada
-        let sideToSelect = null; // NUEVA variable para rastrear el lado en el menú de selección
+        let sideToSelect = null; // Variable para rastrear el lado en el menú de selección
         
         const { jsPDF } = window.jspdf;
 
@@ -373,7 +373,6 @@
 
         /**
          * Maneja la subida del archivo y comienza el proceso de recorte.
-         * Esta función ahora se llama desde el onchange de los inputs ocultos.
          */
         function handleFileInput(event, side) {
             const file = event.target.files[0];
@@ -477,52 +476,60 @@
             }
         }
         
-        // --- FUNCIÓN PRINCIPAL DE GENERACIÓN Y COMPARTICIÓN ---
+        // --- FUNCIÓN PRINCIPAL DE GENERACIÓN Y COMPARTICIÓN (CORREGIDA) ---
 
         /**
-         * Genera el PDF, luego intenta compartirlo o lo descarga.
+         * Genera el PDF con las imágenes colocadas correctamente.
+         * @returns {Promise<Blob>} Promesa que resuelve con el Blob del PDF.
          */
-        function generatePDF() {
-            if (D.generatePdfBtn.disabled) return;
-            
-            const doc = new jsPDF('portrait', 'mm', 'a4');
-            const margin = 15; 
-            const spacing = 5; 
-            const cardWidth = 85.6; // Ancho estándar INE en mm
-            const cardHeight = 54; // Alto estándar INE en mm
-            const fileName = 'Identificacion_Doble_Cara.pdf';
-
-            try {
-                // Colocar el FRENTE
-                doc.addImage(imgDataFrente, 'JPEG', margin, margin, cardWidth, cardHeight);
-
-                // Colocar el REVERSO
-                const xReverso = margin + cardWidth + spacing; 
-                const yReverso = margin; 
-                doc.addImage(imgDataReverso, 'JPEG', xReverso, yReverso, cardWidth, cardHeight);
-                
-                // 1. Convertir el PDF generado a un Blob (necesario para compartir)
-                const pdfBlob = doc.output('blob');
-
-                // 2. Intentar compartir si el navegador lo soporta
-                const fileToShare = new File([pdfBlob], fileName, { type: 'application/pdf' });
-                
-                if (navigator.canShare && navigator.canShare({ files: [fileToShare] })) {
-                    
-                    sharePDF(fileToShare);
-                    
-                } else {
-                    // 3. Si no se puede compartir, forzar la descarga
-                    doc.save(fileName);
-                    alert("Tu dispositivo/navegador no soporta la opción de compartir archivos. El PDF ha sido descargado automáticamente.");
+        function createPDFBlob() {
+            return new Promise((resolve, reject) => {
+                if (!imgDataFrente || !imgDataReverso) {
+                    return reject(new Error("Faltan datos de imagen (frente o reverso)."));
                 }
                 
-            } catch (error) {
-                alert("Ocurrió un error al generar el PDF. Revisa las imágenes.");
-                console.error("Error al generar PDF:", error);
-            }
+                const doc = new jsPDF('portrait', 'mm', 'a4');
+                const margin = 15;
+                const spacing = 5;
+                const cardWidth = 85.6; // Ancho estándar INE en mm
+                const cardHeight = 54; // Alto estándar INE en mm
+                
+                // Función para cargar una imagen Base64
+                const loadImage = (data) => {
+                    return new Promise((res, rej) => {
+                        const img = new Image();
+                        img.onload = () => res(img);
+                        img.onerror = (e) => rej(e);
+                        img.src = data;
+                    });
+                };
+
+                // Cargar ambas imágenes antes de intentar añadirlas al PDF
+                Promise.all([loadImage(imgDataFrente), loadImage(imgDataReverso)])
+                    .then(([imgFrente, imgReverso]) => {
+                        
+                        // Colocar el FRENTE (arriba a la izquierda)
+                        doc.addImage(imgFrente, 'JPEG', margin, margin, cardWidth, cardHeight);
+
+                        // Colocar el REVERSO (arriba a la derecha, junto al frente)
+                        const xReverso = margin + cardWidth + spacing;
+                        const yReverso = margin;
+                        
+                        doc.addImage(imgReverso, 'JPEG', xReverso, yReverso, cardWidth, cardHeight);
+                        
+                        // Generar y resolver con el Blob
+                        const pdfBlob = doc.output('blob');
+                        resolve(pdfBlob);
+                        
+                    })
+                    .catch(error => {
+                        console.error("Error al cargar imágenes para PDF:", error);
+                        reject(new Error("No se pudieron cargar las imágenes recortadas."));
+                    });
+            });
         }
-        
+
+
         /**
          * Llama a la Web Share API para abrir el menú nativo del móvil.
          */
@@ -530,8 +537,8 @@
             try {
                 await navigator.share({
                     files: [pdfFile],
-                    title: 'INE CLIENTE',
-                    text: 'Suerte en la venta 🌟.',
+                    title: 'Identificación',
+                    text: 'Documento generado con la app web.',
                 });
                 
                 console.log('PDF compartido con éxito.');
@@ -541,13 +548,67 @@
                     console.log('Compartir cancelado por el usuario.');
                 } else {
                     console.error('Error al intentar compartir:', error);
-                    alert('No se pudo compartir. El PDF será descargado.');
-                    // Fallback: si falla el compartir (pero no por cancelación), se descarga
-                    const doc = new jsPDF('portrait', 'mm', 'a4');
-                    doc.addImage(imgDataFrente, 'JPEG', 15, 15, 85.6, 54);
-                    doc.addImage(imgDataReverso, 'JPEG', 15 + 85.6 + 5, 15, 85.6, 54);
-                    doc.save('Identificacion_Doble_Cara.pdf');
+                    alert('Fallo al compartir. El PDF será descargado automáticamente.');
+                    // Fallback: si falla el compartir, descarga el archivo
+                    // No propagamos el error para no detener generatePDF completamente, pero forzamos la descarga.
+                    const fallbackBlob = new Blob([pdfFile], { type: 'application/pdf' });
+                    savePDF(fallbackBlob, 'Identificacion_Doble_Cara.pdf');
                 }
+                // Se lanza un error solo si fue un error distinto a AbortError para no finalizar el proceso.
+                if (error.name !== 'AbortError') {
+                    throw error;
+                }
+            }
+        }
+        
+        /**
+         * Fuerza la descarga del Blob/File en el navegador.
+         */
+        function savePDF(blob, fileName) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        /**
+         * Función principal para generar, intentar compartir y descargar el PDF.
+         */
+        async function generatePDF() {
+            if (D.generatePdfBtn.disabled) return;
+            
+            const fileName = 'Identificacion_Doble_Cara.pdf';
+            
+            try {
+                D.generatePdfBtn.disabled = true; // Deshabilitar durante el proceso
+                D.generatePdfBtn.textContent = '⏳ Generando PDF...';
+
+                const pdfBlob = await createPDFBlob();
+
+                // 1. Intentar compartir si el navegador lo soporta
+                const fileToShare = new File([pdfBlob], fileName, { type: 'application/pdf' });
+                
+                if (navigator.canShare && navigator.canShare({ files: [fileToShare] })) {
+                    
+                    await sharePDF(fileToShare); 
+                    
+                } else {
+                    // 2. Si no se puede compartir, forzar la descarga
+                    savePDF(pdfBlob, fileName);
+                    alert("Tu dispositivo/navegador no soporta la opción de compartir archivos. El PDF ha sido descargado automáticamente.");
+                }
+                
+            } catch (error) {
+                // Manejo de errores de createPDFBlob o errores serios de sharePDF
+                alert("Ocurrió un error grave al generar o compartir el PDF. Revisa las imágenes.");
+                console.error("Error en generatePDF:", error);
+            } finally {
+                D.generatePdfBtn.disabled = false;
+                D.generatePdfBtn.textContent = '⬇️ Generar y Compartir / Descargar PDF';
             }
         }
         
