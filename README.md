@@ -22,7 +22,7 @@
             --shadow-heavy: 0 25px 50px rgba(0, 0, 0, 0.15);
         }
 
-        /* 💫 Estilo del Fondo Animado (Opcional: puedes quitarlo si no quieres la animación) */
+        /* 💫 Estilo del Fondo Animado */
         @keyframes moveBackground {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -42,9 +42,9 @@
             justify-content: center;
             align-items: center;
             color: var(--text-color);
-            background: linear-gradient(135deg, #dbeafe, #e0f2fe, #fff); /* Fondo gradiente */
+            background: linear-gradient(135deg, #dbeafe, #e0f2fe, #fff);
             background-size: 400% 400%;
-            animation: moveBackground 20s ease infinite; /* Animación de fondo */
+            animation: moveBackground 20s ease infinite;
             padding: 20px;
         }
 
@@ -121,14 +121,14 @@
             justify-content: center;
             align-items: center;
             gap: 20px;
-            min-height: 150px; /* Para mantener espacio */
+            min-height: 150px;
             margin-bottom: 30px;
         }
 
         .preview img {
             width: 100%;
             max-width: 45%;
-            aspect-ratio: 1.586 / 1; /* Relación de aspecto estándar de ID */
+            aspect-ratio: 1.586 / 1;
             object-fit: cover;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -184,6 +184,16 @@
             transform: translateY(-2px);
             box-shadow: 0 15px 25px rgba(16, 185, 129, 0.4);
         }
+        
+        /* Estilo para el botón cuando se puede compartir */
+        .generate-btn[data-action="share"] {
+            background: linear-gradient(90deg, #3b82f6, #2563eb); /* Azul para Compartir */
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .generate-btn[data-action="share"]:hover {
+            box-shadow: 0 15px 25px rgba(59, 130, 246, 0.4);
+        }
 
         .generate-btn:disabled {
             background: #94a3b8;
@@ -197,7 +207,7 @@
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(5px); /* Efecto de desenfoque */
+            backdrop-filter: blur(5px);
             justify-content: center;
             align-items: center;
             z-index: 1000;
@@ -296,7 +306,7 @@
 
     <div id="status" class="status" data-complete="false">📄 Falta subir imágenes</div>
 
-    <button id="btnPDF" class="generate-btn" disabled>
+    <button id="btnAction" class="generate-btn" disabled data-action="generate">
         ⬇️ Generar PDF
     </button>
 
@@ -329,13 +339,14 @@
     let side = null; // 'frente' o 'reverso'
     let cropper = null;
     let rotation = 0;
+    let pdfBlob = null; // Variable para almacenar el PDF en formato Blob
 
     // Elementos del DOM
     const prevF = document.getElementById('prev-frente');
     const prevR = document.getElementById('prev-reverso');
     const placeholder = document.getElementById('placeholder');
     const statusDiv = document.getElementById('status');
-    const btnPDF = document.getElementById('btnPDF');
+    const btnAction = document.getElementById('btnAction'); // Renombrado a btnAction
 
     const selectModal = document.getElementById('selectModal');
     const cropModal = document.getElementById('cropModal');
@@ -348,7 +359,6 @@
     function openSelection(s) {
         side = s;
         selectModal.style.display = 'flex';
-        // Añadir clase para la animación de entrada
         setTimeout(() => selectModal.classList.add('active'), 10);
     }
 
@@ -369,7 +379,7 @@
         document.getElementById(`${side}-${type}`).click();
     }
 
-    // 🔄 Lógica de Carga de Imagen y Apertura del Crop Modal
+    // Lógica de Carga de Imagen y Apertura del Crop Modal
     ['frente-camera', 'frente-gallery', 'reverso-camera', 'reverso-gallery']
     .forEach(id => {
         document.getElementById(id).onchange = e => {
@@ -382,14 +392,13 @@
                 cropModal.style.display = 'flex';
                 setTimeout(() => cropModal.classList.add('active'), 10);
                 
-                // Inicializar Cropper.js después de que la imagen se ha cargado en el modal
                 setTimeout(() => {
                     if (cropper) cropper.destroy();
                     rotation = 0; // Resetear rotación
                     cropper = new Cropper(cropImg, {
-                        aspectRatio: 1.586, // Relación de aspecto estándar (e.g., ID, tarjeta de crédito)
-                        viewMode: 1, // Restringe el área de recorte al tamaño del contenedor
-                        autoCropArea: 0.9, // Área de auto-recorte inicial
+                        aspectRatio: 1.586, 
+                        viewMode: 1, 
+                        autoCropArea: 0.9,
                         movable: true,
                         zoomable: true,
                         rotatable: true,
@@ -415,16 +424,13 @@
     function confirmCrop() {
         if (!cropper) return;
         
-        // Obtener el canvas recortado con un tamaño de salida fijo para consistencia
         const croppedCanvas = cropper.getCroppedCanvas({
             width: 1000,
             imageSmoothingQuality: 'high'
         });
         
-        // Convertir a DataURL (JPEG con calidad 85%)
         const dataURL = croppedCanvas.toDataURL('image/jpeg', 0.85);
         
-        // Asignar al lado correspondiente
         if (side === 'frente') {
             frente = dataURL;
             prevF.src = dataURL;
@@ -435,6 +441,7 @@
         
         closeCrop();
         updateUI();
+        pdfBlob = null; // Reiniciar el blob del PDF si se cambia la imagen
     }
 
     /**
@@ -463,37 +470,124 @@
         placeholder.style.display = isComplete ? 'none' : 'block';
 
         // Botón y Estado
-        btnPDF.disabled = !isComplete;
+        btnAction.disabled = !isComplete;
         statusDiv.setAttribute('data-complete', isComplete.toString());
-        statusDiv.textContent = isComplete ? '✅ Listo para generar PDF' : '⚠️ Falta una imagen';
+        
+        if (isComplete) {
+            statusDiv.textContent = '✅ Listo. Haz clic para generar y compartir.';
+            // Determinar acción del botón (compartir si es posible, sino descargar)
+            if (navigator.share) {
+                btnAction.textContent = '📤 Generar y Compartir PDF';
+                btnAction.setAttribute('data-action', 'share');
+            } else {
+                btnAction.textContent = '⬇️ Generar PDF';
+                btnAction.setAttribute('data-action', 'download');
+            }
+        } else {
+            statusDiv.textContent = '⚠️ Falta una imagen';
+            btnAction.textContent = '⬇️ Generar PDF';
+            btnAction.setAttribute('data-action', 'generate');
+        }
     }
 
-    // ⬇️ Generación de PDF
-    btnPDF.onclick = () => {
-        if (!frente || !reverso) return;
+    /**
+     * Función que genera el PDF y devuelve un Blob.
+     * @returns {Promise<Blob>} El PDF generado como Blob.
+     */
+    function generatePdfBlob() {
+        if (pdfBlob) return Promise.resolve(pdfBlob); // Retorna caché si existe
 
-        // Dimensiones del PDF A4
-        // Ancho: 210 mm, Alto: 297 mm
         const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
             format: 'a4'
         });
 
-        // Dimensiones estándar de una ID (CR-80): 85.60 mm x 53.98 mm.
         const idWidth = 85.6;
         const idHeight = 54;
-        const marginX = (210 - (idWidth * 2) - 10) / 2; // Margen para centrar dos IDs, con 10mm de espacio entre ellas
-        const startY = 20; // Posición vertical inicial
+        // Centrar las dos IDs con 10mm de espacio entre ellas
+        const marginX = (210 - (idWidth * 2) - 10) / 2; 
+        const startY = 20;
 
-        // 1. Frente (Posicionado a la izquierda)
         pdf.addImage(frente, 'JPEG', marginX, startY, idWidth, idHeight);
-        
-        // 2. Reverso (Posicionado a la derecha)
         pdf.addImage(reverso, 'JPEG', marginX + idWidth + 10, startY, idWidth, idHeight);
         
-        // Guardar el archivo
-        pdf.save('Identificacion_Generada.pdf');
+        // Convertir a Blob
+        return new Promise((resolve) => {
+            pdfBlob = pdf.output('blob');
+            resolve(pdfBlob);
+        });
+    }
+    
+    /**
+     * Maneja la descarga del archivo.
+     */
+    function downloadFile() {
+        generatePdfBlob().then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Identificacion_Generada.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alert('PDF descargado exitosamente.');
+        }).catch(error => {
+            console.error('Error al descargar el PDF:', error);
+            alert('Error al generar o descargar el PDF.');
+        });
+    }
+
+    /**
+     * Maneja la función de compartir (si está disponible).
+     */
+    async function shareFile() {
+        if (!navigator.share || !navigator.canShare) {
+            console.warn('Web Share API no soportada. Iniciando descarga.');
+            downloadFile();
+            return;
+        }
+
+        try {
+            const blob = await generatePdfBlob();
+            const file = new File([blob], 'Identificacion_Generada.pdf', { type: 'application/pdf' });
+
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: 'Identificación Generada',
+                    text: 'Te comparto el PDF de la identificación generada.',
+                });
+                console.log('PDF compartido exitosamente');
+            } else {
+                // Si canShare falla para archivos, intentar compartir solo texto/título (como fallback, aunque es menos útil)
+                await navigator.share({
+                    title: 'Identificación Generada',
+                    text: 'No se pudo compartir el archivo, pero te envío el título.',
+                });
+                console.log('Compartido solo texto/título.');
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Error al compartir el PDF:', error);
+                alert('Hubo un error al intentar compartir. Intentando descargar...');
+                downloadFile(); // Fallback a descarga si falla la compartición
+            } else {
+                console.log('Compartición cancelada por el usuario.');
+            }
+        }
+    }
+    
+    // Asignación del manejador de eventos principal
+    btnAction.onclick = () => {
+        const action = btnAction.getAttribute('data-action');
+        if (action === 'share') {
+            shareFile();
+        } else {
+            // 'generate' o 'download'
+            downloadFile();
+        }
     };
     
     // Ejecutar al inicio para asegurar el estado inicial
