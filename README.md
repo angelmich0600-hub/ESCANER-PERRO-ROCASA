@@ -1,620 +1,504 @@
+
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📷 Generador PDF de Identificación (Doble Cara) - Final Arreglado</title>
-
+    <title>Generador PDF de Identificación Profesional</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    
+
     <style>
+        /* 🎨 Variables de Diseño y Colores */
+        :root {
+            --primary: #4f46e5; /* Índigo */
+            --secondary: #10b981; /* Esmeralda */
+            --danger: #ef4444; /* Rojo */
+            --bg-color: #f3f4f6; /* Gris claro para fondo */
+            --card-color: #ffffff;
+            --text-color: #1f2937; /* Gris oscuro */
+            --shadow-light: 0 10px 20px rgba(0, 0, 0, 0.08);
+            --shadow-heavy: 0 25px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        /* 💫 Estilo del Fondo Animado (Opcional: puedes quitarlo si no quieres la animación) */
+        @keyframes moveBackground {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 📐 Estilos Base */
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
             margin: 0;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+            background: linear-gradient(135deg, #dbeafe, #e0f2fe, #fff); /* Fondo gradiente */
+            background-size: 400% 400%;
+            animation: moveBackground 20s ease infinite; /* Animación de fondo */
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
         }
 
-        .container {
-            background-color: #ffffff;
+        /* 📱 Contenedor Principal de la Aplicación */
+        .app {
+            width: 100%;
+            max-width: 950px;
+            background: var(--card-color);
+            border-radius: 24px;
+            box-shadow: var(--shadow-heavy);
+            padding: 40px;
+            text-align: center;
+        }
+
+        /* 📰 Encabezado */
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+
+        /* 📸 Tarjetas para Cargar Imágenes */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: linear-gradient(145deg, var(--card-color), #f9fafb);
+            border-radius: 18px;
             padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            max-width: 900px;
-            width: 100%;
-        }
-
-        h1 {
-            color: #2c3e50;
             text-align: center;
-            margin-bottom: 5px;
-        }
-
-        p.subtitle {
-            text-align: center;
-            color: #7f8c8d;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #ecf0f1;
-            padding-bottom: 15px;
-        }
-
-        .input-group {
-            display: flex;
-            justify-content: space-around;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        /* Ahora es un div con onclick */
-        .input-box {
-            flex: 1;
-            padding: 15px;
-            border: 2px dashed #3498db;
-            border-radius: 8px;
-            text-align: center;
-            background-color: #ecf0f1;
             cursor: pointer;
-            transition: background-color 0.3s;
+            border: 2px solid var(--bg-color);
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-light);
         }
 
-        .input-box:hover {
-            background-color: #e0e6e9;
-            border-color: #2980b9;
+        .card:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: var(--primary);
+            box-shadow: 0 15px 30px rgba(79, 70, 229, 0.2);
         }
 
-        input[type="file"] {
-            display: none;
-        }
-
-        .preview-area {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            min-height: 200px;
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .preview-area img {
-            max-width: 45%;
-            height: auto;
-            border: 1px solid #ddd;
-            object-fit: contain;
-        }
-        
-        .placeholder {
-            color: #95a5a6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-style: italic;
-        }
-
-        #generate-pdf-btn {
+        .card span {
+            font-size: 3.5rem;
             display: block;
-            width: 100%;
-            padding: 15px;
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.2em;
-            cursor: pointer;
-            transition: background-color 0.3s;
+            margin-bottom: 10px;
         }
 
-        #generate-pdf-btn:hover {
-            background-color: #2ecc71;
+        .card h3 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1.5rem;
         }
-        
-        #generate-pdf-btn:disabled {
-            background-color: #95a5a6;
+
+        .card p {
+            color: #9ca3af;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* 🖼️ Previsualización */
+        .preview {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            min-height: 150px; /* Para mantener espacio */
+            margin-bottom: 30px;
+        }
+
+        .preview img {
+            width: 100%;
+            max-width: 45%;
+            aspect-ratio: 1.586 / 1; /* Relación de aspecto estándar de ID */
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 3px solid #e5e7eb;
+            transition: transform 0.3s ease;
+        }
+
+        .preview img:hover {
+            transform: scale(1.03);
+        }
+
+        .placeholder {
+            color: #94a3b8;
+            font-style: italic;
+            padding: 30px;
+            font-size: 1.1rem;
+        }
+
+        /* 📢 Estado */
+        .status {
+            font-weight: 700;
+            margin-bottom: 25px;
+            padding: 10px;
+            border-radius: 8px;
+            color: var(--text-color);
+        }
+
+        .status[data-complete="true"] {
+            color: var(--secondary);
+            background-color: #ecfdf5;
+        }
+        .status[data-complete="false"] {
+            color: #f59e0b;
+            background-color: #fffbeb;
+        }
+
+        /* ⬇️ Botón Principal */
+        .generate-btn {
+            width: 100%;
+            padding: 18px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--secondary), #16a34a);
+            border: none;
+            color: white;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .generate-btn:disabled {
+            background: #94a3b8;
+            box-shadow: none;
             cursor: not-allowed;
         }
 
-        /* --- Estilos del Modal de Recorte --- */
-        #crop-modal {
+        /* 🔳 MODALES */
+        .modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 9999;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px); /* Efecto de desenfoque */
             justify-content: center;
             align-items: center;
-        }
-        
-        .modal-content {
-            background: white;
+            z-index: 1000;
             padding: 20px;
-            width: 90%;
-            max-width: 600px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
-        #image-to-crop {
+        .modal-box {
+            background: var(--card-color);
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: var(--shadow-heavy);
+            transform: scale(0.95);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .modal.active .modal-box {
+            transform: scale(1);
+            opacity: 1;
+        }
+        
+        .modal-box button {
+            width: 100%;
+            padding: 16px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+
+        .camera { background: var(--primary); color: white; }
+        .gallery { background: #0ea5e9; color: white; }
+        .cancel { background: #e5e7eb; color: var(--text-color); }
+        .rotate { background: #f97316; color: white; }
+        .confirm { background: var(--secondary); color: white; }
+        
+        .modal-box button:hover:not(.cancel) {
+            filter: brightness(1.1);
+        }
+        .modal-box button:active {
+            transform: scale(0.98);
+        }
+
+        /* Estilos específicos para el modal de recorte */
+        #cropModal .modal-box {
+            max-width: 500px;
+        }
+        
+        .crop-img {
             display: block;
             max-width: 100%;
-        }
-        
-        .modal-buttons button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 15px;
-        }
-
-        #crop-confirm-btn {
-            background: #2ecc71;
-            color: white;
-        }
-
-        #crop-cancel-btn {
-            background: #e74c3c;
-            color: white;
-        }
-        
-        /* ESTILO BOTÓN DE ROTACIÓN */
-        #rotate-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            background: #3498db;
-            color: white;
-            margin-top: 15px;
-            display: block;
-            width: 100%;
-        }
-
-        /* --- Estilos del NUEVO Modal de Selección --- */
-        #selection-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 9998; 
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content-small {
-            background: white;
-            padding: 20px;
-            width: 90%;
-            max-width: 350px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .selection-options button {
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            border: none;
             border-radius: 8px;
-            font-size: 1.1em;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.3s;
         }
 
-        #select-camera-btn {
-            background-color: #e74c3c;
-            color: white;
-        }
-
-        #select-gallery-btn {
-            background-color: #3498db;
-            color: white;
-        }
-
-        #selection-cancel-btn {
-            background: #bdc3c7;
-            color: #2c3e50;
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 5px;
-            width: 100%;
-            border: none;
-            cursor: pointer;
-        }
     </style>
 </head>
+
 <body>
 
-    <div class="container">
-        <h1>Generador de PDF para Identificación (Doble Cara)</h1>
-        <p class="subtitle">Sube, recorta al tamaño de la INE y unifica ambas caras en una sola hoja PDF tamaño A4.</p>
+<div class="app">
 
-        <div class="input-group">
-            
-            <div class="input-box" onclick="openSelectionMenu('frente')">
-                📸 **Frente** (Toca para seleccionar origen)
-                <input type="file" id="file-frente-camara" accept="image/*" capture="environment" onchange="handleFileInput(event, 'frente')" style="display:none;">
-                <input type="file" id="file-frente-galeria" accept="image/*" onchange="handleFileInput(event, 'frente')" style="display:none;">
-            </div>
-            
-            <div class="input-box" onclick="openSelectionMenu('reverso')">
-                📸 **Reverso** (Toca para seleccionar origen)
-                <input type="file" id="file-reverso-camara" accept="image/*" capture="environment" onchange="handleFileInput(event, 'reverso')" style="display:none;">
-                <input type="file" id="file-reverso-galeria" accept="image/*" onchange="handleFileInput(event, 'reverso')" style="display:none;">
-            </div>
-        </div>
-        <h2>Vista Previa (PDF Final)</h2>
-        <div class="preview-area">
-            <img id="preview-frente" src="" alt="Frente - Recortado" style="display:none;">
-            <img id="preview-reverso" src="" alt="Reverso - Recortado" style="display:none;">
-            <div id="placeholder" class="placeholder" style="display:flex;">Sube y recorta ambas imágenes.</div>
-        </div>
-
-        <button id="generate-pdf-btn" disabled>
-            ⬇️ Generar y Compartir / Descargar PDF
-        </button>
+    <div class="header">
+        <h1>🪪 Generador PDF de Identificación</h1>
+        <p>Sube, recorta y genera tu documento de identificación profesional en formato PDF.</p>
     </div>
 
-    <div id="crop-modal">
-        <div class="modal-content">
-            <h2>✂️ Recortar Imagen</h2>
-            <p>Ajusta el área para que coincida con tu credencial. El ratio es fijo (tarjeta estándar).</p>
-            <div style="max-height: 400px; overflow: hidden; margin-bottom: 15px;">
-                <img id="image-to-crop">
-            </div>
-            
-            <button id="rotate-btn">🔄 Rotar 90°</button>
-            <div class="modal-buttons">
-                <button id="crop-confirm-btn">Confirmar Recorte</button>
-                <button id="crop-cancel-btn">Cancelar</button>
-            </div>
+    <div class="cards">
+        <div class="card" onclick="openSelection('frente')">
+            <span>📸</span>
+            <h3>Frente de la Identificación</h3>
+            <p>Toca para subir la imagen frontal.</p>
         </div>
-    </div>
-    
-    <div id="selection-modal">
-        <div class="modal-content-small">
-            <h2>Elige una Opción</h2>
-            <div class="selection-options">
-                <button id="select-camera-btn">📷 Tomar Foto (Cámara)</button>
-                <button id="select-gallery-btn">🖼️ Subir de Galería</button>
-            </div>
-            <button id="selection-cancel-btn">Cancelar</button>
-        </div>
-    </div>
-    <script>
-        // Variables globales
-        let imgDataFrente = null;
-        let imgDataReverso = null;
-        let currentCropper = null;
-        let currentSide = null;
-        let rotated = 0; // Variable para rastrear la rotación acumulada
-        let sideToSelect = null; // Variable para rastrear el lado en el menú de selección
-        
-        const { jsPDF } = window.jspdf;
 
-        // Referencias del DOM (Actualizadas)
-        const D = {
-            cropModal: document.getElementById('crop-modal'),
-            imageToCrop: document.getElementById('image-to-crop'),
-            cropConfirmBtn: document.getElementById('crop-confirm-btn'),
-            cropCancelBtn: document.getElementById('crop-cancel-btn'),
-            generatePdfBtn: document.getElementById('generate-pdf-btn'),
-            placeholder: document.getElementById('placeholder'),
-            previewFrente: document.getElementById('preview-frente'),
-            previewReverso: document.getElementById('preview-reverso'),
-            rotateBtn: document.getElementById('rotate-btn'),
-            
-            // NUEVAS REFERENCIAS PARA EL MENÚ DE SELECCIÓN
-            selectionModal: document.getElementById('selection-modal'),
-            selectCameraBtn: document.getElementById('select-camera-btn'),
-            selectGalleryBtn: document.getElementById('select-gallery-btn'),
-            selectionCancelBtn: document.getElementById('selection-cancel-btn')
+        <div class="card" onclick="openSelection('reverso')">
+            <span>📷</span>
+            <h3>Reverso de la Identificación</h3>
+            <p>Toca para subir la imagen trasera.</p>
+        </div>
+    </div>
+
+    <input type="file" id="frente-camera" accept="image/*" capture hidden>
+    <input type="file" id="frente-gallery" accept="image/*" hidden>
+    <input type="file" id="reverso-camera" accept="image/*" capture hidden>
+    <input type="file" id="reverso-gallery" accept="image/*" hidden>
+
+    <div class="preview">
+        <img id="prev-frente" style="display: none;">
+        <img id="prev-reverso" style="display: none;">
+        <div id="placeholder" class="placeholder">Aún no hay imágenes cargadas</div>
+    </div>
+
+    <div id="status" class="status" data-complete="false">📄 Falta subir imágenes</div>
+
+    <button id="btnPDF" class="generate-btn" disabled>
+        ⬇️ Generar PDF
+    </button>
+
+</div>
+
+<div id="selectModal" class="modal">
+    <div class="modal-box">
+        <button class="camera" onclick="choose('camera')">📷 Abrir Cámara</button>
+        <button class="gallery" onclick="choose('gallery')">🖼️ Seleccionar de Galería</button>
+        <button class="cancel" onclick="closeSelect()">❌ Cancelar</button>
+    </div>
+</div>
+
+<div id="cropModal" class="modal">
+    <div class="modal-box">
+        <div style="max-height: 70vh; overflow: auto; margin-bottom: 20px;">
+            <img id="cropImg" class="crop-img">
+        </div>
+        <button class="rotate" onclick="rotateImg()">🔄 Rotar Imagen</button>
+        <button class="confirm" onclick="confirmCrop()">✔️ Confirmar Recorte</button>
+        <button class="cancel" onclick="closeCrop()">❌ Cancelar</button>
+    </div>
+</div>
+
+<script>
+    const { jsPDF } = window.jspdf;
+    // Variables de estado
+    let frente = null;
+    let reverso = null;
+    let side = null; // 'frente' o 'reverso'
+    let cropper = null;
+    let rotation = 0;
+
+    // Elementos del DOM
+    const prevF = document.getElementById('prev-frente');
+    const prevR = document.getElementById('prev-reverso');
+    const placeholder = document.getElementById('placeholder');
+    const statusDiv = document.getElementById('status');
+    const btnPDF = document.getElementById('btnPDF');
+
+    const selectModal = document.getElementById('selectModal');
+    const cropModal = document.getElementById('cropModal');
+    const cropImg = document.getElementById('cropImg');
+
+    /**
+     * Muestra el modal de selección de origen (cámara o galería).
+     * @param {string} s - Lado de la identificación a cargar ('frente' o 'reverso').
+     */
+    function openSelection(s) {
+        side = s;
+        selectModal.style.display = 'flex';
+        // Añadir clase para la animación de entrada
+        setTimeout(() => selectModal.classList.add('active'), 10);
+    }
+
+    /**
+     * Oculta el modal de selección de origen.
+     */
+    function closeSelect() {
+        selectModal.classList.remove('active');
+        setTimeout(() => selectModal.style.display = 'none', 300);
+    }
+
+    /**
+     * Simula el click en el input de archivo correspondiente.
+     * @param {string} type - 'camera' o 'gallery'.
+     */
+    function choose(type) {
+        closeSelect();
+        document.getElementById(`${side}-${type}`).click();
+    }
+
+    // 🔄 Lógica de Carga de Imagen y Apertura del Crop Modal
+    ['frente-camera', 'frente-gallery', 'reverso-camera', 'reverso-gallery']
+    .forEach(id => {
+        document.getElementById(id).onchange = e => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = ev => {
+                cropImg.src = ev.target.result;
+                cropModal.style.display = 'flex';
+                setTimeout(() => cropModal.classList.add('active'), 10);
+                
+                // Inicializar Cropper.js después de que la imagen se ha cargado en el modal
+                setTimeout(() => {
+                    if (cropper) cropper.destroy();
+                    rotation = 0; // Resetear rotación
+                    cropper = new Cropper(cropImg, {
+                        aspectRatio: 1.586, // Relación de aspecto estándar (e.g., ID, tarjeta de crédito)
+                        viewMode: 1, // Restringe el área de recorte al tamaño del contenedor
+                        autoCropArea: 0.9, // Área de auto-recorte inicial
+                        movable: true,
+                        zoomable: true,
+                        rotatable: true,
+                        scalable: false,
+                    });
+                }, 50);
+            };
+            reader.readAsDataURL(file);
         };
+    });
 
-        // --- MANEJADORES DE EVENTOS ---
-        D.cropConfirmBtn.onclick = confirmCrop;
-        D.cropCancelBtn.onclick = cancelCrop;
-        D.generatePdfBtn.onclick = generatePDF;
-        D.rotateBtn.onclick = () => { rotateImage(90) };
+    /**
+     * Rota la imagen en el modal de recorte.
+     */
+    function rotateImg() {
+        rotation += 90;
+        cropper.rotateTo(rotation);
+    }
+
+    /**
+     * Confirma el recorte, obtiene el DataURL y actualiza la UI.
+     */
+    function confirmCrop() {
+        if (!cropper) return;
         
-        // MANEJADORES DE EVENTOS PARA EL NUEVO MENÚ
-        D.selectCameraBtn.onclick = () => triggerFileInput('camera');
-        D.selectGalleryBtn.onclick = () => triggerFileInput('gallery');
-        D.selectionCancelBtn.onclick = closeSelectionMenu;
+        // Obtener el canvas recortado con un tamaño de salida fijo para consistencia
+        const croppedCanvas = cropper.getCroppedCanvas({
+            width: 1000,
+            imageSmoothingQuality: 'high'
+        });
         
+        // Convertir a DataURL (JPEG con calidad 85%)
+        const dataURL = croppedCanvas.toDataURL('image/jpeg', 0.85);
         
-        /**
-         * Muestra el modal de selección y establece el lado actual.
-         */
-        function openSelectionMenu(side) {
-            sideToSelect = side;
-            D.selectionModal.style.display = 'flex';
-        }
-
-        /**
-         * Oculta el modal de selección.
-         */
-        function closeSelectionMenu() {
-            D.selectionModal.style.display = 'none';
-            sideToSelect = null;
-        }
-
-        /**
-         * Oculta el modal de selección y simula el click en el input de archivo apropiado.
-         */
-        function triggerFileInput(type) {
-            if (!sideToSelect) return;
-
-            closeSelectionMenu();
-
-            let inputFileId;
-            if (sideToSelect === 'frente') {
-                inputFileId = (type === 'camera') ? 'file-frente-camara' : 'file-frente-galeria';
-            } else {
-                inputFileId = (type === 'camera') ? 'file-reverso-camara' : 'file-reverso-galeria';
-            }
-            
-            // Simular el click en el input de archivo oculto
-            document.getElementById(inputFileId).click();
-        }
-
-        /**
-         * Maneja la subida del archivo y comienza el proceso de recorte.
-         */
-        function handleFileInput(event, side) {
-            const file = event.target.files[0];
-            // IMPORTANTE: Limpiar el valor del input después de tomar el archivo
-            event.target.value = ''; 
-
-            if (file) {
-                if (!['image/jpeg', 'image/png'].includes(file.type)) {
-                    alert('Formato de archivo no soportado. Por favor, sube una imagen JPEG o PNG.');
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    currentSide = side;
-                    rotated = 0; // Reinicia la rotación para cada nueva imagen
-                    
-                    if (currentCropper) currentCropper.destroy();
-                    D.imageToCrop.src = e.target.result;
-                    
-                    D.cropModal.style.display = 'flex';
-                    
-                    // Inicializa Cropper.js
-                    setTimeout(() => {
-                         currentCropper = new Cropper(D.imageToCrop, {
-                            aspectRatio: 1.586, // Ratio estándar de tarjeta de crédito/INE
-                            viewMode: 1, 
-                            dragMode: 'move',
-                            autoCropArea: 0.9,
-                        });
-                    }, 50);
-                };
-                reader.readAsDataURL(file);
-            }
+        // Asignar al lado correspondiente
+        if (side === 'frente') {
+            frente = dataURL;
+            prevF.src = dataURL;
+        } else {
+            reverso = dataURL;
+            prevR.src = dataURL;
         }
         
-        /**
-         * Rotar la imagen 90 grados usando Cropper.js
-         */
-        function rotateImage(degree) {
-            if (currentCropper) {
-                rotated += degree;
-                currentCropper.rotateTo(rotated);
-            }
-        }
+        closeCrop();
+        updateUI();
+    }
 
+    /**
+     * Cierra y limpia el modal de recorte.
+     */
+    function closeCrop() {
+        cropModal.classList.remove('active');
+        setTimeout(() => {
+            cropper?.destroy();
+            cropper = null;
+            rotation = 0;
+            side = null;
+            cropModal.style.display = 'none';
+        }, 300);
+    }
 
-        /**
-         * Confirma el recorte y actualiza las variables de datos y la vista previa.
-         */
-        function confirmCrop() {
-            if (!currentCropper) return;
+    /**
+     * Actualiza la visibilidad de las imágenes de previsualización y el estado.
+     */
+    function updateUI() {
+        const isComplete = frente && reverso;
 
-            // Obtiene la imagen recortada en formato base64 con un ancho de 500px para buena calidad
-            const base64Data = currentCropper.getCroppedCanvas({
-                imageSmoothingQuality: 'high',
-                width: 500, 
-            }).toDataURL('image/jpeg', 0.9);
+        // Previsualización
+        prevF.style.display = frente ? 'block' : 'none';
+        prevR.style.display = reverso ? 'block' : 'none';
+        placeholder.style.display = isComplete ? 'none' : 'block';
 
-            // Actualiza la variable de datos y la vista previa
-            const previewElement = (currentSide === 'frente') ? D.previewFrente : D.previewReverso;
-            previewElement.src = base64Data;
-            previewElement.style.display = 'block';
+        // Botón y Estado
+        btnPDF.disabled = !isComplete;
+        statusDiv.setAttribute('data-complete', isComplete.toString());
+        statusDiv.textContent = isComplete ? '✅ Listo para generar PDF' : '⚠️ Falta una imagen';
+    }
 
-            if (currentSide === 'frente') {
-                imgDataFrente = base64Data;
-            } else {
-                imgDataReverso = base64Data;
-            }
+    // ⬇️ Generación de PDF
+    btnPDF.onclick = () => {
+        if (!frente || !reverso) return;
 
-            // Cierra el modal y limpia el cropper
-            closeCropModal();
-            checkAndEnableButton();
-        }
+        // Dimensiones del PDF A4
+        // Ancho: 210 mm, Alto: 297 mm
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
 
-        /**
-         * Cancela la operación de recorte y cierra el modal.
-         */
-        function cancelCrop() {
-            closeCropModal();
-        }
+        // Dimensiones estándar de una ID (CR-80): 85.60 mm x 53.98 mm.
+        const idWidth = 85.6;
+        const idHeight = 54;
+        const marginX = (210 - (idWidth * 2) - 10) / 2; // Margen para centrar dos IDs, con 10mm de espacio entre ellas
+        const startY = 20; // Posición vertical inicial
 
-        function closeCropModal() {
-            if (currentCropper) {
-                currentCropper.destroy();
-                currentCropper = null;
-            }
-            D.cropModal.style.display = 'none';
-        }
-
-        /**
-         * Verifica el estado de las imágenes y habilita/deshabilita el botón.
-         */
-        function checkAndEnableButton() {
-            if (imgDataFrente && imgDataReverso) {
-                D.generatePdfBtn.disabled = false;
-                D.placeholder.style.display = 'none';
-            } else {
-                D.generatePdfBtn.disabled = true;
-                D.placeholder.style.display = 'flex';
-            }
-        }
+        // 1. Frente (Posicionado a la izquierda)
+        pdf.addImage(frente, 'JPEG', marginX, startY, idWidth, idHeight);
         
-        // --- FUNCIÓN PRINCIPAL DE GENERACIÓN Y COMPARTICIÓN (CORREGIDA) ---
-
-        /**
-         * Genera el PDF con las imágenes colocadas correctamente.
-         * @returns {Promise<Blob>} Promesa que resuelve con el Blob del PDF.
-         */
-        function createPDFBlob() {
-            return new Promise((resolve, reject) => {
-                if (!imgDataFrente || !imgDataReverso) {
-                    return reject(new Error("Faltan datos de imagen (frente o reverso)."));
-                }
-                
-                const doc = new jsPDF('portrait', 'mm', 'a4');
-                const margin = 15;
-                const spacing = 5;
-                const cardWidth = 85.6; // Ancho estándar INE en mm
-                const cardHeight = 54; // Alto estándar INE en mm
-                
-                // Función para cargar una imagen Base64
-                const loadImage = (data) => {
-                    return new Promise((res, rej) => {
-                        const img = new Image();
-                        img.onload = () => res(img);
-                        img.onerror = (e) => rej(e);
-                        img.src = data;
-                    });
-                };
-
-                // Cargar ambas imágenes antes de intentar añadirlas al PDF
-                Promise.all([loadImage(imgDataFrente), loadImage(imgDataReverso)])
-                    .then(([imgFrente, imgReverso]) => {
-                        
-                        // Colocar el FRENTE (arriba a la izquierda)
-                        doc.addImage(imgFrente, 'JPEG', margin, margin, cardWidth, cardHeight);
-
-                        // Colocar el REVERSO (arriba a la derecha, junto al frente)
-                        const xReverso = margin + cardWidth + spacing;
-                        const yReverso = margin;
-                        
-                        doc.addImage(imgReverso, 'JPEG', xReverso, yReverso, cardWidth, cardHeight);
-                        
-                        // Generar y resolver con el Blob
-                        const pdfBlob = doc.output('blob');
-                        resolve(pdfBlob);
-                        
-                    })
-                    .catch(error => {
-                        console.error("Error al cargar imágenes para PDF:", error);
-                        reject(new Error("No se pudieron cargar las imágenes recortadas."));
-                    });
-            });
-        }
-
-
-        /**
-         * Llama a la Web Share API para abrir el menú nativo del móvil.
-         */
-        async function sharePDF(pdfFile) {
-            try {
-                await navigator.share({
-                    files: [pdfFile],
-                    title: 'Identificación',
-                    text: 'Documento generado con la app web.',
-                });
-                
-                console.log('PDF compartido con éxito.');
-
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    console.log('Compartir cancelado por el usuario.');
-                } else {
-                    console.error('Error al intentar compartir:', error);
-                    alert('Fallo al compartir. El PDF será descargado automáticamente.');
-                    // Fallback: si falla el compartir, descarga el archivo
-                    // No propagamos el error para no detener generatePDF completamente, pero forzamos la descarga.
-                    const fallbackBlob = new Blob([pdfFile], { type: 'application/pdf' });
-                    savePDF(fallbackBlob, 'Identificacion_Doble_Cara.pdf');
-                }
-                // Se lanza un error solo si fue un error distinto a AbortError para no finalizar el proceso.
-                if (error.name !== 'AbortError') {
-                    throw error;
-                }
-            }
-        }
+        // 2. Reverso (Posicionado a la derecha)
+        pdf.addImage(reverso, 'JPEG', marginX + idWidth + 10, startY, idWidth, idHeight);
         
-        /**
-         * Fuerza la descarga del Blob/File en el navegador.
-         */
-        function savePDF(blob, fileName) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        /**
-         * Función principal para generar, intentar compartir y descargar el PDF.
-         */
-        async function generatePDF() {
-            if (D.generatePdfBtn.disabled) return;
-            
-            const fileName = 'Identificacion_Doble_Cara.pdf';
-            
-            try {
-                D.generatePdfBtn.disabled = true; // Deshabilitar durante el proceso
-                D.generatePdfBtn.textContent = '⏳ Generando PDF...';
-
-                const pdfBlob = await createPDFBlob();
-
-                // 1. Intentar compartir si el navegador lo soporta
-                const fileToShare = new File([pdfBlob], fileName, { type: 'application/pdf' });
-                
-                if (navigator.canShare && navigator.canShare({ files: [fileToShare] })) {
-                    
-                    await sharePDF(fileToShare); 
-                    
-                } else {
-                    // 2. Si no se puede compartir, forzar la descarga
-                    savePDF(pdfBlob, fileName);
-                    alert("Tu dispositivo/navegador no soporta la opción de compartir archivos. El PDF ha sido descargado automáticamente.");
-                }
-                
-            } catch (error) {
-                // Manejo de errores de createPDFBlob o errores serios de sharePDF
-                alert("Ocurrió un error grave al generar o compartir el PDF. Revisa las imágenes.");
-                console.error("Error en generatePDF:", error);
-            } finally {
-                D.generatePdfBtn.disabled = false;
-                D.generatePdfBtn.textContent = '⬇️ Generar y Compartir / Descargar PDF';
-            }
-        }
-        
-        // Inicializa el estado del botón
-        checkAndEnableButton();
-    </script>
+        // Guardar el archivo
+        pdf.save('Identificacion_Generada.pdf');
+    };
+    
+    // Ejecutar al inicio para asegurar el estado inicial
+    document.addEventListener('DOMContentLoaded', updateUI);
+</script>
 
 </body>
 </html>
